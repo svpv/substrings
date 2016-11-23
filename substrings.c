@@ -6,7 +6,7 @@
 #include <limits.h>
 
 static char strtab[1<<30];
-static unsigned strtab_at; /* place new string at stratab + strtab_at */
+static unsigned strtab_size; /* place new string at stratab + strtab_size */
 
 struct suffix {
     unsigned strix; /* index into strtab */
@@ -49,10 +49,35 @@ static void add_suffix(const char *line, unsigned cnt)
     suf[nsuf].count = cnt;
     bool sort = nsuf == sort_thr;
     nsuf++;
+#if 0
     if (sort) {
 	sort_suffixes();
 	sort_thr += sort_thr / 2;
     }
+#endif
+}
+
+#include "sufsort.h"
+
+static void add_sorted_suffixes(unsigned strix, unsigned len, unsigned cnt)
+{
+    unsigned sa[len];
+    sufsort(strtab + strix, len, sa);
+    for (int i = 0; i < len; i++)
+	suf[nsuf+i] = (struct suffix) { strix + sa[i], cnt };
+#if 0
+    for (int i = nsuf + 1; i < nsuf + len; i++) {
+	const char *str1 = strtab+suf[i-1].strix;
+	const char *str2 = strtab+suf[i  ].strix;
+	assert(*str1);
+	assert(*str2);
+	assert(str1 != str2);
+	int cmp = strcmp(str1, str2);
+	if (cmp >= 0)
+	    fprintf(stderr, "\tbad cmp:\n%s\n%s\n", str1, str2);
+    }
+#endif
+    nsuf += len;
 }
 
 static void add_line(const char *line, unsigned len)
@@ -77,14 +102,11 @@ static void add_line(const char *line, unsigned len)
     len -= (line - line0);
     assert(len);
     assert(line[len] == '\0');
-    line = memcpy(strtab + strtab_at, line, len + 1);
+    memcpy(strtab + strtab_size, line, len + 1);
     assert(line[len] == '\0');
-    strtab_at += len + 1;
-    do {
-	add_suffix(line, cnt);
-	c = *++line;
-    }
-    while (c);
+    unsigned strix = strtab_size;
+    strtab_size += len + 1;
+    add_sorted_suffixes(strix, len, cnt);
 }
 
 static void add_lines(void)
@@ -107,8 +129,8 @@ unsigned lcp[N_SUF]; /* length of the longest common prefix with the previous su
 int main(void)
 {
     add_lines();
-    sort_suffixes();
 #if 0
+    sort_suffixes();
     for (unsigned i = 0; i < nsuf; i++)
 	printf("%u %s\n", suf[i].count, strtab + suf[i].strix);
 #endif
