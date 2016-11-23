@@ -17,46 +17,6 @@ struct suffix {
 static struct suffix suf[N_SUF];
 static unsigned nsuf;
 
-static int sufcmp(const void *s1, const void *s2)
-{
-    const struct suffix *suf1 = s1;
-    const struct suffix *suf2 = s2;
-    return strcmp(strtab + suf1->strix, strtab + suf2->strix);
-}
-
-static void sort_suffixes(void)
-{
-    fprintf(stderr, "qsort... ");
-    qsort(suf, nsuf, sizeof suf[0], sufcmp);
-    int i, j;
-    for (i = 0, j = 0; i < nsuf; i++) {
-	while (i + 1 < nsuf && sufcmp(suf + i, suf + i + 1) == 0)
-	    i++;
-	suf[j++] = suf[i];
-    }
-    fprintf(stderr, "reduced from %9u to %9u\n", nsuf, j);
-    nsuf = j;
-}
-
-static unsigned sort_thr = 1 << 27; /* threshold for interim sorting,
-				       128M suffixes * 8bytes = 1G */
-
-static void add_suffix(const char *line, unsigned cnt)
-{
-    unsigned strix = line - strtab;
-    assert(nsuf < N_SUF);
-    suf[nsuf].strix = strix;
-    suf[nsuf].count = cnt;
-    bool sort = nsuf == sort_thr;
-    nsuf++;
-#if 0
-    if (sort) {
-	sort_suffixes();
-	sort_thr += sort_thr / 2;
-    }
-#endif
-}
-
 #include "sufsort.h"
 
 static void add_sorted_suffixes(unsigned strix, unsigned len, unsigned cnt)
@@ -130,7 +90,6 @@ int main(void)
 {
     add_lines();
 #if 0
-    sort_suffixes();
     for (unsigned i = 0; i < nsuf; i++)
 	printf("%u %s\n", suf[i].count, strtab + suf[i].strix);
 #endif
