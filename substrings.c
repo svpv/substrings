@@ -6,12 +6,12 @@
 #include <limits.h>
 #include "sufbase.h"
 #include "lines.h"
-
-unsigned lcp[N_SUF]; /* length of the longest common prefix with the previous suffix */
+#include "lcp.h"
 
 int main(void)
 {
     add_lines(stdin);
+    make_lcp();
 #if 0
     for (unsigned i = 0; i < nsuf; i++)
 	printf("%u %s\n", suf[i].count, strtab + suf[i].strix);
