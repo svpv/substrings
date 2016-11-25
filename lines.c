@@ -57,6 +57,7 @@ void add_lines(FILE *fp)
 	    line[--len] = '\0';
 	if (len == 0)
 	    continue;
+	assert(len <= MAXLEN);
 	add_line(line, len);
     }
     free(line);

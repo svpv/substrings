@@ -10,7 +10,7 @@ struct suffix {
 #define N_SUF ((1U<<31)-(1<<29))
 union buf {
     struct suffix suf[N_SUF];
-    unsigned lcp[N_SUF];
+    unsigned lcp[N_SUF+1];
 };
 
 extern union buf buf1;
