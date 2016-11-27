@@ -24,18 +24,23 @@ static void substring(const char *str, unsigned len, unsigned cnt)
     printf("%u\t%.*s\n", cnt, len, str);
 }
 
+int prefixes;
+
 int main(int argc, char **argv)
 {
     enum {
 	OPT_MIN_PROFIT = 256,
     };
     static const struct option longopts[] = {
-	{ "min-profit", 1, 0, OPT_MIN_PROFIT },
-	{  NULL,        0, 0, 0 },
+	{ "min-profit",    1, 0, OPT_MIN_PROFIT },
+	{ "prefixes-only", 0, &prefixes, 1 },
+	{  NULL,           0, 0, 0 },
     };
     int c;
     while ((c = getopt_long(argc, argv, "", longopts, NULL)) != -1) {
 	switch (c) {
+	case 0:
+	    break;
 	case OPT_MIN_PROFIT:
 	    min_profit = atoi(optarg);
 	    assert(min_profit > 0);
@@ -45,7 +50,7 @@ int main(int argc, char **argv)
 	    return 1;
 	}
     }
-    add_lines(stdin);
+    add_lines(stdin, prefixes);
     make_lcp();
     ldi_walk(substring);
     return 0;

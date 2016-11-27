@@ -16,7 +16,7 @@ static void add_suffixes(unsigned strix, unsigned len, unsigned cnt)
     nsuf += len;
 }
 
-static void add_line(const char *line, unsigned len)
+static void add_line(const char *line, unsigned len, int prefixes)
 {
     const char *line0 = line;
     while (*line == ' ')
@@ -43,11 +43,17 @@ static void add_line(const char *line, unsigned len)
     unsigned strix = strtab_size;
     strtab_size += len + 1;
     unsigned suf0 = nsuf;
-    add_suffixes(strix, len, cnt);
-    push_for_merge(suf0, len);
+    if (prefixes) {
+	suf[nsuf++] = (struct suffix) { strix, cnt };
+	push_for_merge(suf0, 1);
+    }
+    else {
+	add_suffixes(strix, len, cnt);
+	push_for_merge(suf0, len);
+    }
 }
 
-void add_lines(FILE *fp)
+void add_lines(FILE *fp, int prefixes)
 {
     char *line = NULL;
     size_t alloc_size = 0;
@@ -58,7 +64,7 @@ void add_lines(FILE *fp)
 	if (len == 0)
 	    continue;
 	assert(len <= MAXLEN);
-	add_line(line, len);
+	add_line(line, len, prefixes);
     }
     free(line);
     finish_merge();
