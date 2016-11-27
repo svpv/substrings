@@ -32,4 +32,5 @@ void make_lcp(void)
     lcp[0] = 0;
     for (int i = 1; i < nsuf; i++)
 	lcp[i] = lcp2(strtab + suf[i-1].strix, strtab + suf[i].strix);
+    lcp[nsuf] = 0;
 }
