@@ -16,26 +16,30 @@ static void add_suffixes(unsigned strix, unsigned len, unsigned cnt)
     nsuf += len;
 }
 
-static void add_line(const char *line, unsigned len, int prefixes)
+static void add_line(const char *line, unsigned len, int hascnt, int prefixes)
 {
-    const char *line0 = line;
-    while (*line == ' ')
-	line++;
-    int c = *line;
-    assert(c >= '0' && c <= '9');
     unsigned cnt = 0;
-    do {
-	unsigned cnt0 = cnt;
-	cnt = cnt0 * 10 + c - '0';
-	assert(cnt >= cnt0);
+    if (!hascnt)
+	cnt = 1;
+    else {
+	const char *line0 = line;
+	while (*line == ' ')
+	    line++;
+	int c = *line;
+	assert(c >= '0' && c <= '9');
+	do {
+	    unsigned cnt0 = cnt;
+	    cnt = cnt0 * 10 + c - '0';
+	    assert(cnt >= cnt0);
+	    c = *++line;
+	}
+	while (c >= '0' && c <= '9');
+	assert(cnt);
+	assert(c == ' ' || c == '\t');
 	c = *++line;
+	assert(c);
+	len -= (line - line0);
     }
-    while (c >= '0' && c <= '9');
-    assert(cnt);
-    assert(c == ' ');
-    c = *++line;
-    assert(c);
-    len -= (line - line0);
     assert(len);
     assert(line[len] == '\0');
     memcpy(strtab + strtab_size, line, len + 1);
@@ -53,7 +57,7 @@ static void add_line(const char *line, unsigned len, int prefixes)
     }
 }
 
-void add_lines(FILE *fp, int prefixes)
+void add_lines(FILE *fp, int hascnt, int prefixes)
 {
     char *line = NULL;
     size_t alloc_size = 0;
@@ -64,7 +68,7 @@ void add_lines(FILE *fp, int prefixes)
 	if (len == 0)
 	    continue;
 	assert(len <= MAXLEN);
-	add_line(line, len, prefixes);
+	add_line(line, len, hascnt, prefixes);
     }
     free(line);
     finish_merge();

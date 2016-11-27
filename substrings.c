@@ -24,6 +24,7 @@ static void substring(const char *str, unsigned len, unsigned cnt)
     printf("%u\t%.*s\n", cnt, len, str);
 }
 
+int hascnt;
 int prefixes;
 
 int main(int argc, char **argv)
@@ -32,9 +33,10 @@ int main(int argc, char **argv)
 	OPT_MIN_PROFIT = 256,
     };
     static const struct option longopts[] = {
-	{ "min-profit",    1, 0, OPT_MIN_PROFIT },
-	{ "prefixes-only", 0, &prefixes, 1 },
-	{  NULL,           0, 0, 0 },
+	{ "min-profit",       1, 0, OPT_MIN_PROFIT },
+	{ "lines-have-count", 0, &hascnt, 1 },
+	{ "prefixes-only",    0, &prefixes, 1 },
+	{  NULL,              0, 0, 0 },
     };
     int c;
     while ((c = getopt_long(argc, argv, "", longopts, NULL)) != -1) {
@@ -50,7 +52,7 @@ int main(int argc, char **argv)
 	    return 1;
 	}
     }
-    add_lines(stdin, prefixes);
+    add_lines(stdin, hascnt, prefixes);
     make_lcp();
     ldi_walk(substring);
     return 0;
