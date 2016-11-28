@@ -30,8 +30,11 @@ static void range(int i, int j, int k, ldi_cb_t cb)
     int SIL = lcp[k];
     if (LBL >= SIL)
 	return;
+    unsigned cnt = 0;
+    for (; i <= j; i++)
+	cnt += suf[i].count;
     const char *str = strtab + suf[k].strix;
-    cb(str, SIL, suf[i].count * (j-i+1));
+    cb(str, SIL, cnt);
 }
 
 void ldi_walk(ldi_cb_t cb)
