@@ -1,0 +1,144 @@
+#!/usr/bin/perl
+use v5.14;
+
+use Getopt::Long 2.24 qw(GetOptions :config gnu_getopt);
+GetOptions "prefixes-only" => \my $prefixes_only,
+	   "max-read=i" => \(my $max_read = 4444),
+	   "max-print=i" => \(my $max_print = 200),
+		or die "getopt failed";
+
+my @P0;
+while (<>) {
+    chomp;
+    my ($profit, $cnt, $prefix) = split ' ', $_, 3;
+    push @P0, [ $profit, $cnt, $prefix ] if $profit;
+    last if @P0 >= $max_read;
+}
+
+die "not enough input, expected $max_read lines" if @P0 < $max_read;
+
+sub sortP {
+    sort { $$b[0] <=> $$a[0] or
+	   $$a[1] <=> $$b[1] or
+	   $$a[2] cmp $$b[2] } @_;
+}
+
+@P0 = sortP @P0;
+
+our $min_profit;
+our $profit_below;
+our $profit_above;
+
+my @P;
+
+# transforms @P0 into @P
+sub iter {
+    warn "iter";
+    $profit_below = 0;
+    $profit_above = $P0[0][0];
+    @P = map { [ @$_ ] } @P0;
+    for (my $i = 0; $i < @P; $i++) {
+	my $p = $P[$i];
+	# Find special cases below.  E.g. if p=AA, find q=AAA.
+	# If q's profit >= min_profit, q is kept; moreover, p is placed
+	# after q: p will be downvoted by q.  Otherwise, q is removed.
+	my $J;
+	for (my $j = $i + 1; $j < @P; $j++) {
+	    my $q = $P[$j];
+	    my $pos = index $$q[2], $$p[2];
+	    next unless $pos == 0 or not $prefixes_only and $pos > 0;
+	    if ($$q[0] >= $min_profit) {
+		$profit_above = $$q[0] if $$q[0] < $profit_above;
+		$J = $j;
+	    }
+	    else {
+		$profit_below = $$q[0] if $$q[0] > $profit_below;
+		# remove q
+		splice @P, $j, 1;
+		$j--;
+	    }
+	}
+	if ($J) {
+	    splice @P, $i, 1;
+	    splice @P, $J, 0, $p;
+	    $i--;
+	}
+    }
+    # How do we downvote prefixes?
+    # Note that the counts that we've got are cumulative.
+    # When we match a longer prefix, the number of shorter
+    # prefixes should be reduced by the number of longer matches.
+    # Consider this arrangement:
+    #	AAA
+    #	AABB
+    #	AAB
+    #	AA
+    # AA should be downvoted by AAA and AAB, but not AABB.
+    for (my $i = @P - 1; $i >= 0; $i--) {
+	my $p = $P[$i];
+	my @downvoters;
+	for (my $j = 0; $j < $i; $j++) {
+	    my $q = $P[$j];
+	    my $pos = index $$q[2], $$p[2];
+	    next unless $pos == 0 or not $prefixes_only and $pos > 0;
+	    push @downvoters, $q;
+	}
+	next unless @downvoters;
+	@downvoters = sort { $$a[2] cmp $$b[2] } @downvoters;
+	my $prev;
+	for my $q (@downvoters) {
+	    if (defined $prev) {
+		my $pos = index $$q[2], $prev;
+		next if $pos == 0 or not $prefixes_only and $pos > 0;
+	    }
+	    $$p[1] -= $$q[1];
+	    $prev = $$q[2];
+	}
+	die if $$p[1] < 0;
+	$$p[0] = $$p[1] * (length($$p[2]) - 1);
+    }
+    die "not enoguth data" if @P < $max_print;
+    @P = sortP @P;
+}
+
+# The initial guess is to keep special cases that are at least
+# as profitable as the last entry on the original list.
+$min_profit = $P0[$max_print-1][0];
+
+iter;
+
+use List::Util qw(sum);
+my $total_profit = sum map { $$_[0] } @P[0..$max_print-1];
+
+# explore surrounding area
+sub explore ($) {
+    my $above = shift;
+    local ($min_profit, $profit_below, $profit_above) =
+	  ($min_profit, $profit_below, $profit_above);
+    my ($niter, $inarow);
+    while (1) {
+	my @saveP = @P;
+	$min_profit = ($above > 0) ? $profit_above : $profit_below;
+	iter;
+	$niter++;
+	my $new_total_profit = sum map { $$_[0] } @P[0..$max_print-1];
+        if ($new_total_profit > $total_profit) {
+	    warn "improved: $total_profit -> $new_total_profit\n";
+	    # @P overwritten
+	    $total_profit = $new_total_profit;
+	    $inarow = 0;
+	}
+	else {
+	    warn "detiriorated: $total_profit -> $new_total_profit\n";
+	    @P = @saveP;
+	    last if ++$inarow > 2 or
+		$niter > 3 and $new_total_profit / $total_profit < 0.99;
+	}
+    }
+    warn "last iter";
+}
+
+explore +1;
+explore -1;
+
+say "$$_[0] $$_[1]\t$$_[2]" for @P[0..$max_print+9];
